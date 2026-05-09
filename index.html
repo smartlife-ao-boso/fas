@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>房総FAS プランナー実績管理</title>
+<script>
+var link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = 'https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Quicksand:wght@400;500;600;700&display=swap';
+document.head.appendChild(link);
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; background: linear-gradient(180deg, #edf7f4 0%, #eef3fb 45%, #f7f3ed 100%); background-attachment: fixed; color: #2f3d45; line-height: 1.6; min-height: 100vh; }
+.container { max-width: 1400px; margin: 0 auto; padding: 25px; }
+.hero { background: linear-gradient(135deg, #24746b 0%, #3f7f9f 52%, #b8793f 100%); color: white; padding: 38px 30px 30px; border-radius: 18px; margin-bottom: 22px; text-align: center; box-shadow: 0 8px 28px rgba(36,116,107,0.24); }
+.hero h1 { font-family: "Quicksand", "Zen Maru Gothic", sans-serif; font-size: 34px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.hero p { font-size: 15px; opacity: 0.92; }
+.icon-stats { display: flex; justify-content: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+.icon-stat { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.92); border-radius: 14px; padding: 14px 18px 11px; min-width: 108px; box-shadow: 0 4px 16px rgba(69,92,105,0.1); border: 1px solid rgba(90,120,135,0.18); }
+.icon-stat .num { font-family: "Quicksand", sans-serif; font-size: 26px; font-weight: 700; color: #2f3d45; line-height: 1; }
+.icon-stat .lbl { font-size: 11px; color: #6d7c83; margin-top: 4px; }
+.top-row { display: flex; gap: 14px; margin-bottom: 24px; align-items: stretch; }
+.search-area { flex: 1; text-align: center; }
+.search-area input { width: 100%; max-width: 460px; padding: 11px 22px; border: 2px solid rgba(86,120,128,0.28); border-radius: 24px; font-size: 15px; font-family: inherit; background: rgba(255,255,255,0.94); outline: none; color: #2f3d45; }
+.search-area input:focus { border-color: #24746b; box-shadow: 0 0 0 3px rgba(36,116,107,0.12); }
+.notice-area { flex: 1; min-width: 0; background: rgba(255,255,255,0.75); border: 1px solid rgba(90,120,135,0.2); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(69,92,105,0.06); }
+.notice-title { font-size: 13px; font-weight: 700; color: #24746b; margin-bottom: 8px; }
+.notice-list { max-height: 90px; overflow-y: auto; font-size: 12px; color: #4f5d62; }
+.notice-empty { color: #819097; text-align: center; padding: 14px 0; }
+.region { margin-bottom: 28px; }
+.region + .region { border-top: 1px solid rgba(90,120,135,0.16); padding-top: 22px; }
+.region-hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.region-badge { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: white; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+.region-name { font-size: 18px; font-weight: 700; }
+.region-meta { font-size: 12px; color: #6d7c83; }
+.region-cnt { margin-left: auto; background: rgba(255,255,255,0.82); border-radius: 18px; padding: 4px 14px; font-size: 13px; font-weight: 700; color: #24746b; border: 1px solid rgba(90,120,135,0.22); }
+.people-row { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0; }
+.p-icon { display: flex; flex-direction: column; align-items: center; width: 96px; min-height: 112px; padding: 10px 4px 8px; text-decoration: none; color: inherit; border-radius: 14px; cursor: pointer; transition: all 0.2s ease; position: relative; }
+.p-icon:hover { background: rgba(255,255,255,0.86); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(36,116,107,0.14); }
+.p-icon .av { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; margin-bottom: 6px; box-shadow: 0 3px 12px rgba(0,0,0,0.12); }
+.p-icon .nm { font-size: 12px; font-weight: 700; text-align: center; line-height: 1.25; margin-bottom: 4px; }
+.p-icon .nums { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; }
+.p-icon .nums span { font-size: 9px; padding: 1px 5px; border-radius: 6px; line-height: 1.3; font-weight: 600; }
+.n-k { background: rgba(63,127,159,0.12); color: #3f7f9f; }
+.n-p { background: rgba(36,116,107,0.12); color: #24746b; }
+.n-a { background: rgba(184,121,63,0.14); color: #9a632d; }
+.n-d { background: rgba(117,86,150,0.12); color: #755696; }
+.rc0 .region-badge, .rc0 .av { background: linear-gradient(135deg, #24746b, #4ba390); }
+.rc1 .region-badge, .rc1 .av { background: linear-gradient(135deg, #3f7f9f, #66a9c4); }
+.rc2 .region-badge, .rc2 .av { background: linear-gradient(135deg, #b8793f, #d69b5e); }
+.rc3 .region-badge, .rc3 .av { background: linear-gradient(135deg, #756096, #a18bbc); }
+.rc4 .region-badge, .rc4 .av { background: linear-gradient(135deg, #56815b, #7baa7a); }
+.rc5 .region-badge, .rc5 .av { background: linear-gradient(135deg, #9b5e68, #c9858c); }
+.rc6 .region-badge, .rc6 .av { background: linear-gradient(135deg, #596f93, #8198bd); }
+.hidden { display: none !important; }
+@media (max-width: 720px) { .container { padding: 14px; } .hero { padding: 24px 16px 20px; } .hero h1 { font-size: 22px; } .top-row { flex-direction: column; } .icon-stat { min-width: 72px; padding: 10px 9px 8px; } .icon-stat .num { font-size: 18px; } .people-row { gap: 6px; } .p-icon { width: 78px; } .p-icon .av { width: 42px; height: 42px; font-size: 18px; } .p-icon .nm { font-size: 11px; } .region-name { font-size: 15px; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero"><h1>房総FAS プランナー実績管理</h1><p>Book1.xlsx 所属データ連携 / 2026年4月〜</p></div>
+  <div class="icon-stats">
+    <div class="icon-stat"><div class="num" id="sPeople">46</div><div class="lbl">プランナー</div></div>
+    <div class="icon-stat"><div class="num" id="sBases">7</div><div class="lbl">拠点</div></div>
+    <div class="icon-stat"><div class="num" id="sCust">-</div><div class="lbl">総担当軒数</div></div>
+    <div class="icon-stat"><div class="num" id="sAO">-</div><div class="lbl">総AO生数</div></div>
+    <div class="icon-stat"><div class="num" id="sDX">-</div><div class="lbl">総DX数</div></div>
+  </div>
+  <div class="top-row">
+    <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div style="margin-top:10px;"><a href="log.html" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.78;">変更ログを確認</a></div></div>
+    <div class="notice-area"><div class="notice-title">連絡事項</div><div class="notice-list" id="noticeList"><div class="notice-empty">房総専用GAS URLが未設定です</div></div></div>
+  </div>
+  <div id="regions"></div>
+</div>
+<script src="site-config.js"></script>
+<script>
+var GAS_URL = window.BOSO_GAS_URL || "";
+var planners = [];
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>'"]/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]; }); }
+function keyName(name) { return String(name || "").replace(/\s/g, ""); }
+function shortBase(base) { return String(base || "").replace(/^スマートライフ/, "").replace(/^SLMC/, "").replace(/^DCL/, "").replace(/クラブラウンジ/, "").slice(0, 2); }
+function renderList(list) {
+  planners = list || [];
+  var byBase = {};
+  planners.forEach(function(p) { if (!byBase[p.base]) byBase[p.base] = []; byBase[p.base].push(p); });
+  var bases = Object.keys(byBase);
+  document.getElementById("sPeople").textContent = planners.length;
+  document.getElementById("sBases").textContent = bases.length;
+  var html = "";
+  bases.forEach(function(base, idx) {
+    var people = byBase[base];
+    html += '<div class="region rc' + (idx % 7) + '"><div class="region-hdr"><div class="region-badge">' + esc(shortBase(base)) + '</div><div><div class="region-name">' + esc(base) + '</div><div class="region-meta">Book1.xlsx</div></div><div class="region-cnt">' + people.length + '名</div></div><div class="people-row">';
+    people.forEach(function(p) {
+      html += '<a href="プランナー/' + encodeURIComponent(p.folder) + '/index.html" class="p-icon" data-n="' + esc(p.name) + '"><div class="av">' + esc(p.name.charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="nums"><span class="n-k">軒0</span><span class="n-p">人0</span><span class="n-a">AO0</span><span class="n-d">DX0</span></div></a>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById("regions").innerHTML = html;
+}
+function filter() {
+  var q = document.getElementById('q').value.toLowerCase();
+  var shown = 0;
+  document.querySelectorAll('.p-icon').forEach(function(el) {
+    var match = !q || el.dataset.n.toLowerCase().indexOf(q) !== -1;
+    el.classList.toggle('hidden', !match);
+    if (match) shown++;
+  });
+  document.querySelectorAll('.region').forEach(function(r) {
+    r.classList.toggle('hidden', r.querySelectorAll('.p-icon:not(.hidden)').length === 0);
+  });
+  document.getElementById('sPeople').textContent = shown;
+}
+function loadTotals() {
+  if (!GAS_URL) return;
+  var script = document.createElement("script");
+  script.src = GAS_URL + "?action=totals&callback=onTotalsLoaded&_=" + Date.now();
+  document.body.appendChild(script);
+}
+function onTotalsLoaded(data) {
+  var totals = data.planners || data || {};
+  var totalCust = 0, totalDX = 0, totalAO = 0;
+  document.querySelectorAll('.p-icon').forEach(function(el) {
+    var name = el.dataset.n;
+    var d = totals[name] || totals[keyName(name)];
+    if (!d) return;
+    var cust = Number(d.cust) || 0, people = Number(d.people) || 0, ao = Number(d.ao) || 0, dx = Number(d.dx) || 0;
+    totalCust += cust; totalAO += ao; totalDX += dx;
+    el.querySelector('.nums').innerHTML = '<span class="n-k">軒' + cust + '</span><span class="n-p">人' + people + '</span><span class="n-a">AO' + ao + '</span><span class="n-d">DX' + dx + '</span>';
+  });
+  document.getElementById('sCust').textContent = totalCust;
+  document.getElementById('sAO').textContent = totalAO;
+  document.getElementById('sDX').textContent = totalDX;
+}
+function loadNotices() {
+  if (!GAS_URL) return;
+  var script = document.createElement("script");
+  script.src = GAS_URL + "?action=notices&callback=onNoticesLoaded&_=" + Date.now();
+  document.body.appendChild(script);
+}
+function onNoticesLoaded(data) {
+  var area = document.getElementById("noticeList");
+  if (!data || data.status !== "ok" || !data.notices || data.notices.length === 0) { area.innerHTML = '<div class="notice-empty">連絡事項はありません</div>'; return; }
+  area.innerHTML = data.notices.map(function(n) { return '<div><strong>' + esc(n.date) + '</strong> ' + esc(n.content) + '</div>'; }).join('');
+}
+fetch('planners.json').then(function(r) { return r.json(); }).then(function(list) { renderList(list); loadTotals(); loadNotices(); }).catch(function() { document.getElementById('regions').innerHTML = '<div class="notice-empty">planners.jsonを読み込めませんでした</div>'; });
+</script>
+</body>
+</html>

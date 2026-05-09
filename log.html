@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>変更ログ - 房総FAS</title>
+<script>
+var link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = 'https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Quicksand:wght@400;500;600;700&display=swap';
+document.head.appendChild(link);
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  background: linear-gradient(180deg, #f0f4ff 0%, #e8edf8 30%, #f3eef6 70%, #f0f4ff 100%);
+  background-attachment: fixed;
+  color: #3a4060; line-height: 1.6; min-height: 100vh;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 25px; }
+
+.header {
+  background: linear-gradient(135deg, #4a7cc9 0%, #6b5ea6 40%, #8b6eae 100%);
+  color: white; padding: 30px; border-radius: 20px;
+  margin-bottom: 24px; text-align: center;
+  box-shadow: 0 8px 32px rgba(74, 124, 201, 0.3);
+}
+.header h1 { font-size: 1.6em; font-weight: 700; }
+.header p { font-size: 0.9em; opacity: 0.85; margin-top: 4px; }
+
+.back-link {
+  display: inline-block; margin-bottom: 16px;
+  color: #6b5ea6; text-decoration: none; font-weight: 500;
+}
+.back-link:hover { text-decoration: underline; }
+
+/* パスワード画面 */
+.pw-box {
+  background: white; border-radius: 18px; padding: 40px;
+  text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  max-width: 400px; margin: 40px auto;
+}
+.pw-box h2 { font-size: 1.2em; margin-bottom: 16px; color: #6b5ea6; }
+.pw-box input {
+  width: 100%; padding: 12px 16px; border: 2px solid #ddd;
+  border-radius: 12px; font-size: 1em; text-align: center;
+  font-family: inherit; outline: none;
+}
+.pw-box input:focus { border-color: #6b5ea6; }
+.pw-box button {
+  margin-top: 14px; padding: 12px 40px;
+  background: linear-gradient(135deg, #4a7cc9, #6b5ea6);
+  color: white; border: none; border-radius: 12px;
+  font-size: 1em; font-family: inherit; cursor: pointer;
+  font-weight: 600;
+}
+.pw-box button:hover { opacity: 0.9; }
+.pw-error { color: #e74c3c; margin-top: 10px; display: none; font-size: 0.9em; }
+
+/* ログ表示 */
+.log-area { display: none; }
+
+.filter-bar {
+  background: white; border-radius: 14px; padding: 16px 20px;
+  margin-bottom: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+.filter-bar input, .filter-bar select {
+  padding: 8px 14px; border: 2px solid #e0e0e0; border-radius: 10px;
+  font-size: 0.9em; font-family: inherit; outline: none;
+}
+.filter-bar input:focus, .filter-bar select:focus { border-color: #6b5ea6; }
+.filter-bar input { flex: 1; min-width: 150px; }
+.log-count { font-size: 0.85em; color: #888; margin-left: auto; }
+
+table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: white; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+th {
+  background: linear-gradient(135deg, #4a7cc9, #6b5ea6);
+  color: white; padding: 14px 16px; font-weight: 600;
+  font-size: 0.9em; text-align: left;
+}
+td {
+  padding: 12px 16px; border-bottom: 1px solid #f0f0f0;
+  font-size: 0.88em;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8f6ff; }
+
+.no-data {
+  text-align: center; padding: 40px; color: #aaa;
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+@media (max-width: 600px) {
+  .container { padding: 14px; }
+  .filter-bar { flex-direction: column; }
+  td, th { padding: 10px 12px; font-size: 0.82em; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="back-link">← トップページに戻る</a>
+
+  <div class="header">
+    <h1>変更ログ</h1>
+    <p>プランナーの入力履歴を確認できます</p>
+  </div>
+
+  <!-- パスワード入力 -->
+  <div class="pw-box" id="pwBox">
+    <h2>パスワードを入力</h2>
+    <input type="password" id="pwInput" placeholder="パスワード" onkeydown="if(event.key==='Enter')checkPw()">
+    <br>
+    <button onclick="checkPw()">確認</button>
+    <div class="pw-error" id="pwError">パスワードが違います</div>
+  </div>
+
+  <!-- ログ表示エリア -->
+  <div class="log-area" id="logArea">
+    <div class="filter-bar">
+      <input type="text" id="filterName" placeholder="名前で検索..." oninput="filterLogs()">
+      <select id="filterItem" onchange="filterLogs()">
+        <option value="">すべての項目</option>
+      </select>
+      <span class="log-count" id="logCount"></span>
+    </div>
+    <div id="logTable"></div>
+  </div>
+</div>
+
+<script src="site-config.js"></script>
+<script>
+var GAS_URL = window.BOSO_GAS_URL || "";
+var allLogs = [];
+
+function checkPw() {
+  if (!GAS_URL) {
+    document.getElementById("pwError").textContent = "房総専用GAS URLが未設定です";
+    document.getElementById("pwError").style.display = "block";
+    return;
+  }
+  var pw = document.getElementById("pwInput").value;
+  if (!pw) return;
+  document.getElementById("pwError").style.display = "none";
+
+  var script = document.createElement("script");
+  script.src = GAS_URL + "?action=log&pw=" + encodeURIComponent(pw) + "&callback=onLogResult";
+  document.body.appendChild(script);
+}
+
+function onLogResult(data) {
+  if (data.status === "error") {
+    document.getElementById("pwError").style.display = "block";
+    return;
+  }
+  allLogs = data.logs || [];
+  document.getElementById("pwBox").style.display = "none";
+  document.getElementById("logArea").style.display = "block";
+  buildItemFilter();
+  filterLogs();
+}
+
+function buildItemFilter() {
+  var items = {};
+  for (var i = 0; i < allLogs.length; i++) {
+    if (allLogs[i].item) items[allLogs[i].item] = true;
+  }
+  var sel = document.getElementById("filterItem");
+  var keys = Object.keys(items).sort();
+  for (var j = 0; j < keys.length; j++) {
+    var opt = document.createElement("option");
+    opt.value = keys[j];
+    opt.textContent = keys[j];
+    sel.appendChild(opt);
+  }
+}
+
+function filterLogs() {
+  var nameFilter = document.getElementById("filterName").value.trim();
+  var itemFilter = document.getElementById("filterItem").value;
+
+  var filtered = allLogs.filter(function(log) {
+    if (nameFilter && log.name.indexOf(nameFilter) === -1) return false;
+    if (itemFilter && log.item !== itemFilter) return false;
+    return true;
+  });
+
+  // 新しい順に表示
+  filtered.reverse();
+
+  document.getElementById("logCount").textContent = filtered.length + "件";
+
+  if (filtered.length === 0) {
+    document.getElementById("logTable").innerHTML = '<div class="no-data">該当する履歴がありません</div>';
+    return;
+  }
+
+  var html = '<table><tr><th>日時</th><th>名前</th><th>変更項目</th><th>変更前</th><th></th><th>変更後</th></tr>';
+  for (var i = 0; i < filtered.length; i++) {
+    var log = filtered[i];
+    html += '<tr><td>' + esc(log.date) + '</td><td>' + esc(log.name) + '</td><td>' + esc(log.item) + '</td><td style="text-align:right">' + esc(String(log.oldVal)) + '</td><td style="color:#6b5ea6;font-weight:bold">→</td><td style="text-align:right;color:#4a7cc9;font-weight:600">' + esc(String(log.newVal)) + '</td></tr>';
+  }
+  html += '</table>';
+  document.getElementById("logTable").innerHTML = html;
+}
+
+function esc(s) {
+  var d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
