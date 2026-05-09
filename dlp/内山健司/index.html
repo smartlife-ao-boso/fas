@@ -273,7 +273,7 @@ body {
 </head>
 <body>
 <div class="container">
-    <a href="../../index.html" class="back-link">← プランナー一覧に戻る</a>
+    <a href="https://smartlife-ao-boso.github.io/fas/" class="back-link" id="backLink">← プランナー一覧に戻る</a>
 
     <div class="profile-header">
         <div class="profile-avatar" id="avatar"></div>
@@ -354,6 +354,7 @@ body {
     </div>
 </div>
 
+<script src="site-config.js"></script>
 <script src="../../site-config.js"></script>
 <script>
 var GAS_URL = window.BOSO_GAS_URL || "";
@@ -366,6 +367,39 @@ function loadGAS(url) {
 var profile = null;
 var sheetData = {};
 var editing = false;
+var LOCAL_PLANNER_KEY = "boso_fas_planners";
+
+function keyName(name) { return String(name || "").replace(/\s/g, ""); }
+function getQueryParam(name) { return new URLSearchParams(location.search).get(name) || ""; }
+
+async function findProfileFromPlannerList(targetName) {
+    var lists = [];
+    try {
+        var raw = localStorage.getItem(LOCAL_PLANNER_KEY);
+        if (raw) lists.push(JSON.parse(raw));
+    } catch(e) {}
+    try {
+        var res = await fetch("planners.json");
+        if (res.ok) lists.push(await res.json());
+    } catch(e) {}
+    var targetKey = keyName(targetName);
+    for (var li = 0; li < lists.length; li++) {
+        var list = lists[li] || [];
+        for (var i = 0; i < list.length; i++) {
+            if (keyName(list[i].name) === targetKey || keyName(list[i].folder) === targetKey) {
+                return {
+                    name: list[i].name,
+                    base: list[i].base || "",
+                    cd: list[i].cd || "",
+                    performer: list[i].performer || "",
+                    shikaku: list[i].shikaku || 0,
+                    emp_id: list[i].emp_id || ""
+                };
+            }
+        }
+    }
+    return null;
+}
 
 // スプレッドシートの項目→カテゴリ分け
 var categories = {
@@ -385,7 +419,11 @@ async function init() {
         localData = await res.json();
         profile = localData.profile;
     } catch(e) {
-        profile = { name: decodeURIComponent(location.pathname.split("/").slice(-2)[0]), base: "", performer: "", emp_id: "", cd: "" };
+        var queryName = getQueryParam("name");
+        profile = await findProfileFromPlannerList(queryName);
+        if (!profile) {
+            profile = { name: queryName || decodeURIComponent(location.pathname.split("/").slice(-2)[0]), base: "", performer: "", emp_id: "", cd: "" };
+        }
     }
 
     var p = profile;
