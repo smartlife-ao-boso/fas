@@ -84,7 +84,7 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
   </div>
   <div class="admin-panel">
     <div class="admin-title">
-      <span>プランナー登録・削除</span>
+      <span>プランナー登録・拠点変更・削除</span>
       <button type="button" id="deleteModeBtn" onclick="toggleDeleteMode()">削除モード</button>
     </div>
     <div class="admin-form">
@@ -92,8 +92,10 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
       <input type="text" id="newName" placeholder="氏名">
       <input type="password" id="adminPw" placeholder="管理パスワード">
       <button type="button" onclick="addPlanner()">登録</button>
+      <button type="button" onclick="movePlanner()">拠点変更</button>
     </div>
     <div class="admin-message" id="adminMessage"></div>
+    <div class="admin-message">Ctrl/⌘/Altを押しながらプランナーをクリックすると、氏名と現在拠点を入力欄へ入れられます。</div>
   </div>
   <div id="regions"></div>
 </div>
@@ -136,12 +138,19 @@ function renderList(list) {
     var people = byBase[base];
     html += '<div class="region rc' + (idx % 7) + '"><div class="region-hdr"><div class="region-badge">' + esc(shortBase(base)) + '</div><div><div class="region-name">' + esc(base) + '</div><div class="region-meta">Book1.xlsx</div></div><div class="region-cnt">' + people.length + '名</div></div><div class="people-row">';
     people.forEach(function(p) {
-      html += '<a href="planner-template.html?name=' + encodeURIComponent(p.name) + '" class="p-icon" data-n="' + esc(p.name) + '" data-base="' + esc(p.base) + '"><button type="button" class="p-delete" onclick="deletePlanner(event, this.parentNode.dataset.n)">×</button><div class="av">' + esc(p.name.charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="nums"><span class="n-k">軒0</span><span class="n-p">人0</span><span class="n-a">AO0</span><span class="n-d">DX0</span></div></a>';
+      html += '<a href="planner-template.html?name=' + encodeURIComponent(p.name) + '" class="p-icon" data-n="' + esc(p.name) + '" data-base="' + esc(p.base) + '" onclick="selectPlannerForAdmin(event, this)"><button type="button" class="p-delete" onclick="deletePlanner(event, this.parentNode.dataset.n)">×</button><div class="av">' + esc(p.name.charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="nums"><span class="n-k">軒0</span><span class="n-p">人0</span><span class="n-a">AO0</span><span class="n-d">DX0</span></div></a>';
     });
     html += '</div></div>';
   });
   document.getElementById("regions").innerHTML = html;
   document.getElementById("regions").classList.toggle("delete-mode", deleteMode);
+}
+function selectPlannerForAdmin(ev, el) {
+  if (!ev.altKey && !ev.ctrlKey && !ev.metaKey) return;
+  ev.preventDefault();
+  document.getElementById("newName").value = el.dataset.n || "";
+  document.getElementById("newBase").value = el.dataset.base || "";
+  setAdminMessage("選択しました。拠点名を書き換えて「拠点変更」を押してください", false);
 }
 function toggleDeleteMode() {
   deleteMode = !deleteMode;
@@ -153,17 +162,27 @@ function requestJSONP(url, cbPrefix) {
     var cbName = cbPrefix + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     var script = document.createElement("script");
     var done = false;
+    var timer = setTimeout(function() {
+      if (done) return;
+      done = true;
+      delete window[cbName];
+      script.remove();
+      reject(new Error("GASから応答がありません。Apps Scriptを最新版で再デプロイしたか、公開設定を確認してください。"));
+    }, 15000);
     window[cbName] = function(data) {
       done = true;
+      clearTimeout(timer);
       delete window[cbName];
       script.remove();
       resolve(data);
     };
     script.onerror = function() {
       if (done) return;
+      done = true;
+      clearTimeout(timer);
       delete window[cbName];
       script.remove();
-      reject(new Error("通信エラー"));
+      reject(new Error("通信エラー。GASのデプロイURLまたは公開設定を確認してください。"));
     };
     script.src = url + (url.indexOf("?") === -1 ? "?" : "&") + "callback=" + cbName + "&_=" + Date.now();
     document.body.appendChild(script);
@@ -215,6 +234,39 @@ async function addPlanner() {
   document.getElementById("newName").value = "";
   renderList(planners);
   setAdminMessage(name + " を登録しました", false);
+}
+async function movePlanner() {
+  var base = document.getElementById("newBase").value.trim();
+  var name = document.getElementById("newName").value.trim().replace(/\s+/g, " ");
+  var pw = document.getElementById("adminPw").value;
+  if (!base || !name) { setAdminMessage("変更先の拠点名と氏名を入力してください", true); return; }
+  if (GAS_URL && !pw) { setAdminMessage("管理パスワードを入力してください", true); return; }
+  var target = planners.find(function(p) { return keyName(p.name) === keyName(name); });
+  if (!target) { setAdminMessage("対象プランナーが見つかりません", true); return; }
+  if (target.base === base) { setAdminMessage("現在と同じ拠点です", true); return; }
+  if (!confirm(name + " の拠点を「" + target.base + "」から「" + base + "」へ変更しますか？")) return;
+
+  if (GAS_URL) {
+    try {
+      var result = await requestJSONP(GAS_URL + "?action=planner_move&name=" + encodeURIComponent(name) + "&base=" + encodeURIComponent(base) + "&pw=" + encodeURIComponent(pw), "onPlannerMoved");
+      if (!result || result.status !== "ok") throw new Error(result && result.message ? result.message : "拠点変更に失敗しました");
+      planners = result.planners || planners.map(function(p) {
+        if (keyName(p.name) === keyName(name)) p.base = base;
+        return p;
+      });
+    } catch(e) {
+      setAdminMessage(e.message || "拠点変更に失敗しました", true);
+      return;
+    }
+  } else {
+    planners = planners.map(function(p) {
+      if (keyName(p.name) === keyName(name)) p.base = base;
+      return p;
+    });
+    saveLocalPlanners();
+  }
+  renderList(planners);
+  setAdminMessage(name + " の拠点を変更しました", false);
 }
 async function deletePlanner(ev, name) {
   ev.preventDefault();
