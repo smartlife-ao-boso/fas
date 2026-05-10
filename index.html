@@ -109,6 +109,7 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
 var GAS_URL = window.BOSO_GAS_URL || "";
 var planners = [];
 var deleteMode = false;
+var latestTotals = null;
 var LOCAL_PLANNER_KEY = "boso_fas_planners";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>'"]/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]; }); }
 function keyName(name) { return String(name || "").replace(/\s/g, ""); }
@@ -149,6 +150,7 @@ function renderList(list) {
   });
   document.getElementById("regions").innerHTML = html;
   document.getElementById("regions").classList.toggle("delete-mode", deleteMode);
+  if (latestTotals) applyTotals(latestTotals);
 }
 function selectPlannerForAdmin(ev, el) {
   if (!ev.altKey && !ev.ctrlKey && !ev.metaKey) return;
@@ -352,26 +354,38 @@ function filter() {
   });
   document.getElementById('sPeople').textContent = shown;
 }
-function loadTotals() {
+async function loadTotals() {
   if (!GAS_URL) return;
-  var script = document.createElement("script");
-  script.src = GAS_URL + "?action=totals&callback=onTotalsLoaded&_=" + Date.now();
-  document.body.appendChild(script);
+  try {
+    var data = await requestJSONP(GAS_URL + "?action=totals", "onTotalsLoaded");
+    onTotalsLoaded(data);
+  } catch(e) {
+    setAdminMessage(e.message || "集計値を取得できませんでした", true);
+  }
 }
 function onTotalsLoaded(data) {
+  latestTotals = data || {};
+  applyTotals(latestTotals);
+}
+function applyTotals(data) {
   var totals = data.planners || data || {};
   var totalCust = 0, totalDX = 0, totalAO = 0;
+  var matched = 0;
   document.querySelectorAll('.p-icon').forEach(function(el) {
     var name = el.dataset.n;
     var d = totals[name] || totals[keyName(name)];
     if (!d) return;
+    matched++;
     var cust = Number(d.cust) || 0, people = Number(d.people) || 0, ao = Number(d.ao) || 0, dx = Number(d.dx) || 0;
     totalCust += cust; totalAO += ao; totalDX += dx;
     el.querySelector('.nums').innerHTML = '<span class="n-k">軒' + cust + '</span><span class="n-p">人' + people + '</span><span class="n-a">AO' + ao + '</span><span class="n-d">DX' + dx + '</span>';
   });
-  document.getElementById('sCust').textContent = totalCust;
-  document.getElementById('sAO').textContent = totalAO;
-  document.getElementById('sDX').textContent = totalDX;
+  document.getElementById('sCust').textContent = data.totalCust !== undefined ? data.totalCust : totalCust;
+  document.getElementById('sAO').textContent = data.totalAO !== undefined ? data.totalAO : totalAO;
+  document.getElementById('sDX').textContent = data.totalDX !== undefined ? data.totalDX : totalDX;
+  if (matched === 0 && Object.keys(totals).length > 0) {
+    setAdminMessage("集計値は取得できましたが、一覧の氏名と一致しません。GASを最新版で再デプロイしてください。", true);
+  }
 }
 function loadNotices() {
   if (!GAS_URL) return;
