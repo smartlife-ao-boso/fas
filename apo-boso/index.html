@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>房総apo アポイント管理</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Hiragino Sans", "Yu Gothic", sans-serif; background: #eef4f2; color: #253238; }
+button, input, select, textarea { font: inherit; }
+button { border: 0; border-radius: 7px; padding: 9px 13px; background: #226d63; color: #fff; font-weight: 700; cursor: pointer; }
+button.secondary { background: #52636c; }
+button.danger { background: #a74d42; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input, select, textarea { border: 1px solid #c8d5d2; border-radius: 7px; padding: 9px 10px; background: #fff; color: #253238; }
+textarea { min-height: 38px; resize: vertical; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px; }
+.top { display: flex; align-items: center; gap: 14px; justify-content: space-between; margin-bottom: 14px; }
+.brand h1 { font-size: 24px; margin: 0; letter-spacing: 0; }
+.brand p { margin: 3px 0 0; font-size: 12px; color: #66767b; }
+.panel { background: rgba(255,255,255,.92); border: 1px solid #d5e0dd; border-radius: 8px; padding: 14px; box-shadow: 0 3px 14px rgba(45,73,78,.08); }
+.login { max-width: 420px; margin: 12vh auto 0; }
+.login h1 { font-size: 22px; margin: 0 0 12px; }
+.login-row { display: flex; gap: 8px; }
+.login-row input { flex: 1; min-width: 0; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab { background: #fff; color: #226d63; border: 1px solid #bdd2ce; }
+.tab.active { background: #226d63; color: #fff; border-color: #226d63; }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar input, .toolbar select { min-width: 150px; }
+.spacer { flex: 1; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat { background: #fff; border: 1px solid #d5e0dd; border-radius: 8px; padding: 10px; }
+.stat b { display: block; font-size: 22px; line-height: 1.1; color: #226d63; }
+.stat span { font-size: 11px; color: #66767b; }
+.table-wrap { overflow: auto; border: 1px solid #d5e0dd; border-radius: 8px; background: #fff; }
+table { width: 100%; border-collapse: collapse; min-width: 980px; }
+th, td { border-bottom: 1px solid #e4ece9; padding: 8px; text-align: left; vertical-align: middle; }
+th { background: #f4f8f6; font-size: 12px; color: #52636c; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+td.num input { width: 76px; text-align: right; }
+td.memo textarea { width: 170px; }
+.name-cell { min-width: 160px; }
+.base { display: block; font-size: 11px; color: #66767b; }
+.message { min-height: 22px; margin-top: 10px; font-size: 13px; color: #66767b; }
+.message.error { color: #a74d42; }
+.hidden { display: none !important; }
+.compact-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 780px) {
+  .wrap { padding: 12px; }
+  .top { align-items: flex-start; flex-direction: column; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .toolbar input, .toolbar select { width: 100%; }
+  .spacer { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="loginView" class="panel login">
+    <h1>房総apo</h1>
+    <p>GitHub Pages + GAS 版 アポイント管理</p>
+    <div class="login-row">
+      <input type="password" id="loginPw" placeholder="管理者パスワード" onkeydown="if(event.key==='Enter') login()">
+      <button onclick="login()">ログイン</button>
+    </div>
+    <div id="loginMsg" class="message"></div>
+  </section>
+
+  <main id="appView" class="hidden">
+    <div class="top">
+      <div class="brand">
+        <h1>房総apo アポイント管理</h1>
+        <p>日次入力 / 月次集計 / アポインター管理</p>
+      </div>
+      <div class="compact-actions">
+        <button class="secondary" onclick="location.href='../index.html'">FASへ戻る</button>
+        <button class="secondary" onclick="logout()">ログアウト</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="daily" onclick="showTab('daily')">日次入力</button>
+      <button class="tab" data-tab="monthly" onclick="showTab('monthly')">月次集計</button>
+      <button class="tab" data-tab="appointers" onclick="showTab('appointers')">アポインター管理</button>
+    </div>
+
+    <section id="dailyTab" class="panel">
+      <div class="toolbar">
+        <input type="date" id="dailyDate">
+        <button onclick="loadDaily()">読込</button>
+        <button class="secondary" onclick="saveAllVisible()">表示分を保存</button>
+        <div class="spacer"></div>
+        <input type="search" id="dailySearch" placeholder="氏名・拠点で検索" oninput="renderDaily()">
+      </div>
+      <div class="stats" id="dailyStats"></div>
+      <div class="table-wrap"><table id="dailyTable"></table></div>
+      <div id="dailyMsg" class="message"></div>
+    </section>
+
+    <section id="monthlyTab" class="panel hidden">
+      <div class="toolbar">
+        <input type="month" id="monthPicker">
+        <button onclick="loadMonthly()">集計</button>
+        <button class="secondary" onclick="downloadMonthlyCsv()">CSV</button>
+      </div>
+      <div class="stats" id="monthlyStats"></div>
+      <div class="table-wrap"><table id="monthlyTable"></table></div>
+      <div id="monthlyMsg" class="message"></div>
+    </section>
+
+    <section id="appointersTab" class="panel hidden">
+      <div class="toolbar">
+        <input type="text" id="newBase" placeholder="拠点">
+        <input type="text" id="newName" placeholder="氏名">
+        <button onclick="addAppointer()">追加</button>
+        <button class="secondary" onclick="seedFromFas()">FASプランナー読込</button>
+      </div>
+      <div class="table-wrap"><table id="appointersTable"></table></div>
+      <div id="appointersMsg" class="message"></div>
+    </section>
+  </main>
+</div>
+
+<script src="site-config.js"></script>
+<script>
+var GAS_URL = window.BOSO_APO_GAS_URL || "";
+var password = sessionStorage.getItem("boso_apo_pw") || "";
+var appointers = [];
+var dailyRows = [];
+var monthlyRows = [];
+var monthlyTotal = {};
+var fields = [
+  ["outbound_calls", "架電OUT"],
+  ["inbound_calls", "受電IN"],
+  ["outbound_visit_promises", "来店約束OUT"],
+  ["inbound_visit_promises", "来店約束IN"],
+  ["outbound_expected_visitors", "来店予定人数OUT"],
+  ["inbound_expected_visitors", "来店予定人数IN"]
+];
+
+function today() {
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function thisMonth() {
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>'"]/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]; });
+}
+function setMsg(id, msg, error) {
+  var el = document.getElementById(id);
+  el.textContent = msg || "";
+  el.classList.toggle("error", !!error);
+}
+function requestJSONP(params, prefix, timeoutMs) {
+  return new Promise(function(resolve, reject) {
+    if (!GAS_URL) { reject(new Error("site-config.js に BOSO_APO_GAS_URL を設定してください")); return; }
+    var cb = prefix + "_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+    var script = document.createElement("script");
+    var done = false;
+    var q = Object.keys(params).map(function(k) { return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]); }).join("&");
+    var timer = setTimeout(function() {
+      if (done) return;
+      done = true;
+      delete window[cb];
+      script.remove();
+      reject(new Error("GASから応答がありません。デプロイURLと公開設定を確認してください。"));
+    }, timeoutMs || 15000);
+    window[cb] = function(data) {
+      done = true;
+      clearTimeout(timer);
+      delete window[cb];
+      script.remove();
+      resolve(data);
+    };
+    script.onerror = function() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      delete window[cb];
+      script.remove();
+      reject(new Error("通信エラー。GAS URLを確認してください。"));
+    };
+    script.src = GAS_URL + (GAS_URL.indexOf("?") === -1 ? "?" : "&") + q + "&callback=" + cb + "&_=" + Date.now();
+    document.body.appendChild(script);
+  });
+}
+function api(params, prefix, timeoutMs) {
+  params.pw = password;
+  return requestJSONP(params, prefix, timeoutMs);
+}
+async function login() {
+  password = document.getElementById("loginPw").value;
+  setMsg("loginMsg", "確認中...", false);
+  try {
+    var data = await requestJSONP({ action: "login", pw: password }, "login");
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "ログインできません");
+    sessionStorage.setItem("boso_apo_pw", password);
+    document.getElementById("loginView").classList.add("hidden");
+    document.getElementById("appView").classList.remove("hidden");
+    await initApp();
+  } catch(e) {
+    setMsg("loginMsg", e.message, true);
+  }
+}
+function logout() {
+  sessionStorage.removeItem("boso_apo_pw");
+  location.reload();
+}
+async function initApp() {
+  document.getElementById("dailyDate").value = today();
+  document.getElementById("monthPicker").value = thisMonth();
+  await loadAppointers();
+  await loadDaily();
+}
+function showTab(tab) {
+  ["daily", "monthly", "appointers"].forEach(function(t) {
+    document.getElementById(t + "Tab").classList.toggle("hidden", t !== tab);
+    document.querySelector('[data-tab="' + t + '"]').classList.toggle("active", t === tab);
+  });
+  if (tab === "monthly") loadMonthly();
+  if (tab === "appointers") renderAppointers();
+}
+async function loadAppointers() {
+  var data = await api({ action: "appointers" }, "appointers");
+  if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "アポインターを取得できません");
+  appointers = data.appointers || [];
+  renderAppointers();
+}
+async function addAppointer() {
+  var base = document.getElementById("newBase").value.trim();
+  var name = document.getElementById("newName").value.trim();
+  if (!name) { setMsg("appointersMsg", "氏名を入力してください", true); return; }
+  try {
+    var data = await api({ action: "appointer_add", base: base, name: name }, "appointerAdd");
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "追加できません");
+    appointers = data.appointers || [];
+    document.getElementById("newName").value = "";
+    renderAppointers();
+    setMsg("appointersMsg", "追加しました", false);
+  } catch(e) {
+    setMsg("appointersMsg", e.message, true);
+  }
+}
+async function updateAppointer(id) {
+  var row = document.querySelector('[data-appointer-id="' + id + '"]');
+  var base = row.querySelector(".edit-base").value.trim();
+  var name = row.querySelector(".edit-name").value.trim();
+  var active = row.querySelector(".edit-active").checked ? "1" : "0";
+  try {
+    var data = await api({ action: "appointer_update", id: id, base: base, name: name, active: active }, "appointerUpdate");
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "更新できません");
+    appointers = data.appointers || [];
+    renderAppointers();
+    setMsg("appointersMsg", "更新しました", false);
+  } catch(e) {
+    setMsg("appointersMsg", e.message, true);
+  }
+}
+async function deleteAppointer(id, name) {
+  if (!confirm(name + " を削除しますか？ 実績行は残ります。")) return;
+  try {
+    var data = await api({ action: "appointer_delete", id: id }, "appointerDelete");
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "削除できません");
+    appointers = data.appointers || [];
+    renderAppointers();
+    setMsg("appointersMsg", "削除しました", false);
+  } catch(e) {
+    setMsg("appointersMsg", e.message, true);
+  }
+}
+function renderAppointers() {
+  var html = "<thead><tr><th>有効</th><th>拠点</th><th>氏名</th><th>操作</th></tr></thead><tbody>";
+  appointers.forEach(function(a) {
+    html += '<tr data-appointer-id="' + esc(a.id) + '"><td><input class="edit-active" type="checkbox" ' + (a.active ? "checked" : "") + '></td><td><input class="edit-base" value="' + esc(a.base) + '"></td><td><input class="edit-name" value="' + esc(a.name) + '"></td><td><div class="compact-actions"><button onclick="updateAppointer(\'' + esc(a.id) + '\')">保存</button><button class="danger" onclick="deleteAppointer(\'' + esc(a.id) + '\', \'' + esc(a.name) + '\')">削除</button></div></td></tr>';
+  });
+  html += "</tbody>";
+  document.getElementById("appointersTable").innerHTML = html;
+}
+async function seedFromFas() {
+  setMsg("appointersMsg", "FASプランナーを読み込み中...", false);
+  try {
+    var res = await fetch("../planners.json");
+    var planners = await res.json();
+    var existing = {};
+    appointers.forEach(function(a) { existing[a.name.replace(/\s/g, "")] = true; });
+    var added = 0;
+    for (var i = 0; i < planners.length; i++) {
+      var p = planners[i];
+      if (existing[p.name.replace(/\s/g, "")]) continue;
+      var data = await api({ action: "appointer_add", base: p.base, name: p.name }, "seedAppointer", 20000);
+      if (data && data.status === "ok") {
+        appointers = data.appointers || appointers;
+        added++;
+      }
+    }
+    renderAppointers();
+    setMsg("appointersMsg", added + "名を追加しました", false);
+  } catch(e) {
+    setMsg("appointersMsg", e.message || "読込に失敗しました", true);
+  }
+}
+async function loadDaily() {
+  var date = document.getElementById("dailyDate").value || today();
+  setMsg("dailyMsg", "読み込み中...", false);
+  try {
+    var data = await api({ action: "report_get", date: date }, "dailyLoad");
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "日次データを取得できません");
+    dailyRows = data.rows || [];
+    renderDaily();
+    setMsg("dailyMsg", "読み込みました", false);
+  } catch(e) {
+    setMsg("dailyMsg", e.message, true);
+  }
+}
+function rowMatches(row) {
+  var q = document.getElementById("dailySearch").value.trim().toLowerCase();
+  if (!q) return true;
+  return (row.name + " " + row.base).toLowerCase().indexOf(q) !== -1;
+}
+function renderDaily() {
+  var html = "<thead><tr><th>氏名</th>";
+  fields.forEach(function(f) { html += "<th>" + esc(f[1]) + "</th>"; });
+  html += "<th>メモ</th><th>操作</th></tr></thead><tbody>";
+  dailyRows.forEach(function(row) {
+    if (!rowMatches(row)) return;
+    html += '<tr data-report-id="' + esc(row.id) + '"><td class="name-cell"><strong>' + esc(row.name) + '</strong><span class="base">' + esc(row.base) + '</span></td>';
+    fields.forEach(function(f) {
+      html += '<td class="num"><input type="number" min="0" data-field="' + f[0] + '" value="' + (Number(row.values[f[0]]) || 0) + '"></td>';
+    });
+    html += '<td class="memo"><textarea data-field="memo">' + esc(row.values.memo || "") + '</textarea></td><td><button onclick="saveRow(\'' + esc(row.id) + '\')">保存</button></td></tr>';
+  });
+  html += "</tbody>";
+  document.getElementById("dailyTable").innerHTML = html;
+  renderStats("dailyStats", collectVisibleDailyTotals());
+}
+function collectRowValues(id) {
+  var tr = document.querySelector('[data-report-id="' + id + '"]');
+  var values = {};
+  tr.querySelectorAll("[data-field]").forEach(function(input) {
+    var field = input.dataset.field;
+    values[field] = field === "memo" ? input.value : (Number(input.value) || 0);
+  });
+  return values;
+}
+async function saveRow(id) {
+  var date = document.getElementById("dailyDate").value || today();
+  var values = collectRowValues(id);
+  try {
+    var data = await api({ action: "report_save", date: date, id: id, data: JSON.stringify(values) }, "saveReport", 20000);
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "保存できません");
+    setMsg("dailyMsg", "保存しました", false);
+  } catch(e) {
+    setMsg("dailyMsg", e.message, true);
+  }
+}
+async function saveAllVisible() {
+  var rows = Array.prototype.slice.call(document.querySelectorAll("[data-report-id]"));
+  setMsg("dailyMsg", "保存中... " + rows.length + "件", false);
+  for (var i = 0; i < rows.length; i++) {
+    await saveRow(rows[i].dataset.reportId);
+  }
+  await loadDaily();
+}
+function collectVisibleDailyTotals() {
+  var total = {};
+  fields.forEach(function(f) { total[f[0]] = 0; });
+  document.querySelectorAll("[data-report-id]").forEach(function(tr) {
+    fields.forEach(function(f) {
+      var input = tr.querySelector('[data-field="' + f[0] + '"]');
+      total[f[0]] += Number(input.value) || 0;
+    });
+  });
+  return total;
+}
+async function loadMonthly() {
+  var ym = document.getElementById("monthPicker").value || thisMonth();
+  var parts = ym.split("-");
+  setMsg("monthlyMsg", "集計中...", false);
+  try {
+    var data = await api({ action: "monthly", year: parts[0], month: parts[1] }, "monthly", 30000);
+    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "月次集計を取得できません");
+    monthlyRows = data.rows || [];
+    monthlyTotal = data.total || {};
+    renderMonthly();
+    setMsg("monthlyMsg", "集計しました", false);
+  } catch(e) {
+    setMsg("monthlyMsg", e.message, true);
+  }
+}
+function renderMonthly() {
+  renderStats("monthlyStats", monthlyTotal);
+  var html = "<thead><tr><th>氏名</th>";
+  fields.forEach(function(f) { html += "<th>" + esc(f[1]) + "</th>"; });
+  html += "<th>約束合計</th><th>予定人数合計</th></tr></thead><tbody>";
+  monthlyRows.forEach(function(row) {
+    var v = row.values || {};
+    var promiseTotal = (Number(v.outbound_visit_promises) || 0) + (Number(v.inbound_visit_promises) || 0);
+    var visitorTotal = (Number(v.outbound_expected_visitors) || 0) + (Number(v.inbound_expected_visitors) || 0);
+    html += '<tr><td class="name-cell"><strong>' + esc(row.name) + '</strong><span class="base">' + esc(row.base) + '</span></td>';
+    fields.forEach(function(f) { html += "<td>" + (Number(v[f[0]]) || 0) + "</td>"; });
+    html += "<td>" + promiseTotal + "</td><td>" + visitorTotal + "</td></tr>";
+  });
+  html += "</tbody>";
+  document.getElementById("monthlyTable").innerHTML = html;
+}
+function renderStats(id, values) {
+  values = values || {};
+  var callTotal = (Number(values.outbound_calls) || 0) + (Number(values.inbound_calls) || 0);
+  var promiseTotal = (Number(values.outbound_visit_promises) || 0) + (Number(values.inbound_visit_promises) || 0);
+  var visitorTotal = (Number(values.outbound_expected_visitors) || 0) + (Number(values.inbound_expected_visitors) || 0);
+  var items = [
+    [callTotal, "コール合計"],
+    [values.outbound_calls || 0, "架電OUT"],
+    [values.inbound_calls || 0, "受電IN"],
+    [promiseTotal, "来店約束"],
+    [visitorTotal, "予定人数"],
+    [appointers.filter(function(a) { return a.active; }).length, "有効アポインター"]
+  ];
+  document.getElementById(id).innerHTML = items.map(function(it) { return '<div class="stat"><b>' + it[0] + '</b><span>' + esc(it[1]) + '</span></div>'; }).join("");
+}
+function downloadMonthlyCsv() {
+  var lines = [["拠点","氏名"].concat(fields.map(function(f) { return f[1]; })).join(",")];
+  monthlyRows.forEach(function(row) {
+    var v = row.values || {};
+    var cols = [row.base, row.name].concat(fields.map(function(f) { return Number(v[f[0]]) || 0; }));
+    lines.push(cols.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","));
+  });
+  var blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "boso_apo_monthly_" + (document.getElementById("monthPicker").value || thisMonth()) + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+if (password) {
+  document.getElementById("loginPw").value = password;
+  login();
+}
+</script>
+</body>
+</html>
