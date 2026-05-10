@@ -83,9 +83,10 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
     <div class="icon-stat"><div class="num" id="sDX">-</div><div class="lbl">総DX数</div></div>
   </div>
   <div class="top-row">
-    <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div style="margin-top:10px;"><a href="log.html" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.78;">変更ログを確認</a></div></div>
+    <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div style="margin-top:10px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"><a href="log.html" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.78;">変更ログを確認</a><a href="apo-boso/" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.88; font-weight:700;">房総APOを開く</a></div></div>
     <div class="notice-area"><div class="notice-title">連絡事項</div><div class="notice-list" id="noticeList"><div class="notice-empty">房総専用GAS URLが未設定です</div></div></div>
   </div>
+  <div id="regions"></div>
   <div class="admin-panel">
     <div class="admin-title">
       <span>プランナー登録・拠点変更・削除</span>
@@ -121,7 +122,6 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
       <div class="apo-mappings" id="apoMappings"></div>
     </div>
   </div>
-  <div id="regions"></div>
 </div>
 <script src="site-config.js"></script>
 <script>
