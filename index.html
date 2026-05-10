@@ -25,6 +25,10 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
 .search-area { flex: 1; text-align: center; }
 .search-area input { width: 100%; max-width: 460px; padding: 11px 22px; border: 2px solid rgba(86,120,128,0.28); border-radius: 24px; font-size: 15px; font-family: inherit; background: rgba(255,255,255,0.94); outline: none; color: #2f3d45; }
 .search-area input:focus { border-color: #24746b; box-shadow: 0 0 0 3px rgba(36,116,107,0.12); }
+.quick-links { margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
+.quick-link { color: #24746b; font-size: 13px; text-decoration: none; opacity: 0.78; }
+.quick-button { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 8px 16px; border-radius: 10px; background: #24746b; color: white; font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 3px 10px rgba(36,116,107,0.18); }
+.quick-button:hover { background: #1f655d; }
 .notice-area { flex: 1; min-width: 0; background: rgba(255,255,255,0.75); border: 1px solid rgba(90,120,135,0.2); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(69,92,105,0.06); }
 .notice-title { font-size: 13px; font-weight: 700; color: #24746b; margin-bottom: 8px; }
 .notice-list { max-height: 90px; overflow-y: auto; font-size: 12px; color: #4f5d62; }
@@ -79,7 +83,7 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
     <div class="icon-stat"><div class="num" id="sDX">-</div><div class="lbl">総DX数</div></div>
   </div>
   <div class="top-row">
-    <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div style="margin-top:10px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"><a href="log.html" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.78;">変更ログを確認</a><a href="apo-boso/" style="color:#24746b; font-size:13px; text-decoration:none; opacity:0.88; font-weight:700;">房総APOを開く</a></div></div>
+    <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div class="quick-links"><a href="log.html" class="quick-link">変更ログを確認</a><a href="apo-boso/" class="quick-button">房総APOを開く</a></div></div>
     <div class="notice-area"><div class="notice-title">連絡事項</div><div class="notice-list" id="noticeList"><div class="notice-empty">房総専用GAS URLが未設定です</div></div></div>
   </div>
   <div id="regions"></div>
