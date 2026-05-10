@@ -121,9 +121,10 @@ td.memo textarea { width: 170px; }
   </main>
 </div>
 
+<script src="../site-config.js"></script>
 <script src="site-config.js"></script>
 <script>
-var GAS_URL = window.BOSO_APO_GAS_URL || "";
+var GAS_URL = window.BOSO_APO_GAS_URL || window.BOSO_GAS_URL || "";
 var password = sessionStorage.getItem("boso_apo_pw") || "";
 var appointers = [];
 var dailyRows = [];
@@ -156,7 +157,7 @@ function setMsg(id, msg, error) {
 }
 function requestJSONP(params, prefix, timeoutMs) {
   return new Promise(function(resolve, reject) {
-    if (!GAS_URL) { reject(new Error("site-config.js に BOSO_APO_GAS_URL を設定してください")); return; }
+    if (!GAS_URL) { reject(new Error("site-config.js に BOSO_GAS_URL を設定してください")); return; }
     var cb = prefix + "_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
     var script = document.createElement("script");
     var done = false;
