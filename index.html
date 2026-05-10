@@ -37,10 +37,6 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
 .admin-form button, .admin-title button { padding: 9px 14px; border: 0; border-radius: 10px; background: #24746b; color: white; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
 .admin-title button.delete-active { background: #b05b4a; }
 .admin-message { margin-top: 8px; font-size: 12px; color: #6d7c83; min-height: 18px; }
-.apo-box { border-top: 1px solid rgba(90,120,135,0.16); margin-top: 14px; padding-top: 14px; }
-.apo-status { font-size: 12px; color: #6d7c83; margin-top: 8px; }
-.apo-mappings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 11px; }
-.apo-mappings span { background: rgba(36,116,107,0.1); color: #24746b; border-radius: 7px; padding: 2px 7px; }
 .p-delete { display: none; position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; border-radius: 50%; background: #b05b4a; color: white; font-size: 14px; line-height: 22px; cursor: pointer; }
 .delete-mode .p-delete { display: block; }
 .region { margin-bottom: 28px; }
@@ -106,21 +102,6 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
     </div>
     <div class="admin-message" id="adminMessage"></div>
     <div class="admin-message">Ctrl/⌘/Altを押しながらプランナーをクリックすると、氏名と現在拠点を入力欄へ入れられます。</div>
-    <div class="apo-box">
-      <div class="admin-title"><span>apo連携</span><button type="button" onclick="syncApoNow()">apo手動同期</button></div>
-      <div class="admin-form">
-        <input type="password" id="apoApiKey" placeholder="apo外部APIキー">
-        <button type="button" onclick="saveApoApiKey()">APIキー保存</button>
-        <button type="button" onclick="loadApoMapping()">名寄せ再読込</button>
-      </div>
-      <div class="admin-form" style="margin-top:10px;">
-        <input type="text" id="apoName" placeholder="apo側氏名">
-        <select id="apoFasName"><option value="">FASプランナーを選択</option></select>
-        <button type="button" onclick="saveApoMapping()">名寄せ登録</button>
-      </div>
-      <div class="apo-status" id="apoStatus">apo連携状態を確認中...</div>
-      <div class="apo-mappings" id="apoMappings"></div>
-    </div>
   </div>
 </div>
 <script src="site-config.js"></script>
@@ -238,8 +219,6 @@ async function loadPlannerList() {
         renderList(data.planners);
         loadTotals();
         loadNotices();
-        loadApoStatus();
-        loadApoMapping();
         return;
       }
       if (data && data.status !== "ok") {
@@ -247,7 +226,7 @@ async function loadPlannerList() {
       }
     } catch(e) {}
   }
-  fetch('planners.json').then(function(r) { return r.json(); }).then(function(list) { renderList(list); loadTotals(); loadNotices(); loadApoStatus(); loadApoMapping(); }).catch(function() { document.getElementById('regions').innerHTML = '<div class="notice-empty">planners.jsonを読み込めませんでした</div>'; });
+  fetch('planners.json').then(function(r) { return r.json(); }).then(function(list) { renderList(list); loadTotals(); loadNotices(); }).catch(function() { document.getElementById('regions').innerHTML = '<div class="notice-empty">planners.jsonを読み込めませんでした</div>'; });
 }
 async function addPlanner() {
   var base = document.getElementById("newBase").value.trim();
@@ -428,86 +407,6 @@ function onNoticesLoaded(data) {
   var area = document.getElementById("noticeList");
   if (!data || data.status !== "ok" || !data.notices || data.notices.length === 0) { area.innerHTML = '<div class="notice-empty">連絡事項はありません</div>'; return; }
   area.innerHTML = data.notices.map(function(n) { return '<div><strong>' + esc(n.date) + '</strong> ' + esc(n.content) + '</div>'; }).join('');
-}
-function setApoStatus(msg, isError) {
-  var el = document.getElementById("apoStatus");
-  if (!el) return;
-  el.textContent = msg || "";
-  el.style.color = isError ? "#b05b4a" : "#6d7c83";
-}
-async function loadApoStatus() {
-  if (!GAS_URL) { setApoStatus("GAS URL未設定のためapo連携は無効です", true); return; }
-  try {
-    var data = await requestJSONP(GAS_URL + "?action=apo_status", "onApoStatusLoaded");
-    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "apo状態を取得できません");
-    var keyText = data.apiKeySet ? "APIキー設定済み（" + data.apiKeyHint + "）" : "APIキー未設定";
-    setApoStatus(keyText + " / 名寄せ " + (data.mappingCount || 0) + "件 / " + (data.lastUpdate || "未同期"), !data.apiKeySet);
-  } catch(e) {
-    setApoStatus(e.message || "apo状態を取得できません", true);
-  }
-}
-async function saveApoApiKey() {
-  var key = document.getElementById("apoApiKey").value.trim();
-  var pw = document.getElementById("adminPw").value;
-  if (!key) { setApoStatus("apo外部APIキーを入力してください", true); return; }
-  if (!pw) { setApoStatus("管理パスワードを入力してください", true); return; }
-  try {
-    var result = await requestJSONP(GAS_URL + "?action=apo_api_key_set&key=" + encodeURIComponent(key) + "&pw=" + encodeURIComponent(pw), "onApoKeySaved");
-    if (!result || result.status !== "ok") throw new Error(result && result.message ? result.message : "APIキー保存に失敗しました");
-    document.getElementById("apoApiKey").value = "";
-    setApoStatus(result.message + "（" + result.apiKeyHint + "）", false);
-    loadApoStatus();
-  } catch(e) {
-    setApoStatus(e.message || "APIキー保存に失敗しました", true);
-  }
-}
-async function syncApoNow() {
-  var pw = document.getElementById("adminPw").value;
-  if (!pw) { setApoStatus("管理パスワードを入力してください", true); return; }
-  if (!confirm("apoの当月データをFASへ差分同期しますか？")) return;
-  setApoStatus("apo同期中...", false);
-  try {
-    var result = await requestJSONP(GAS_URL + "?action=apo_sync_now&pw=" + encodeURIComponent(pw), "onApoSynced", 60000);
-    if (!result || result.status !== "ok") throw new Error(result && result.message ? result.message : "apo同期に失敗しました");
-    var skipped = result.skippedNames && result.skippedNames.length ? " / 未紐付け: " + result.skippedNames.slice(0, 5).join(", ") : "";
-    setApoStatus("同期完了: 反映" + (result.processed || 0) + "件 / 初期投入" + (result.bootstrapped || 0) + "件 / スキップ" + (result.skipped || 0) + "件" + skipped, result.skipped > 0);
-    loadTotals();
-  } catch(e) {
-    setApoStatus(e.message || "apo同期に失敗しました", true);
-  }
-}
-async function loadApoMapping() {
-  if (!GAS_URL) return;
-  try {
-    var data = await requestJSONP(GAS_URL + "?action=apo_mapping_list", "onApoMappingLoaded");
-    if (!data || data.status !== "ok") throw new Error(data && data.message ? data.message : "名寄せを取得できません");
-    var box = document.getElementById("apoMappings");
-    if (!box) return;
-    if (!data.mappings || data.mappings.length === 0) {
-      box.innerHTML = '<span>名寄せ未登録。同名は自動照合します。</span>';
-      return;
-    }
-    box.innerHTML = data.mappings.map(function(m) { return '<span>' + esc(m.apoName) + ' → ' + esc(m.fasName) + '</span>'; }).join('');
-  } catch(e) {
-    setApoStatus(e.message || "名寄せを取得できません", true);
-  }
-}
-async function saveApoMapping() {
-  var apoName = document.getElementById("apoName").value.trim();
-  var fasName = document.getElementById("apoFasName").value;
-  var pw = document.getElementById("adminPw").value;
-  if (!apoName || !fasName) { setApoStatus("apo側氏名とFASプランナーを選択してください", true); return; }
-  if (!pw) { setApoStatus("管理パスワードを入力してください", true); return; }
-  try {
-    var result = await requestJSONP(GAS_URL + "?action=apo_mapping_save&apoName=" + encodeURIComponent(apoName) + "&fasName=" + encodeURIComponent(fasName) + "&pw=" + encodeURIComponent(pw), "onApoMappingSaved");
-    if (!result || result.status !== "ok") throw new Error(result && result.message ? result.message : "名寄せ登録に失敗しました");
-    document.getElementById("apoName").value = "";
-    setApoStatus("名寄せを保存しました", false);
-    loadApoMapping();
-    loadApoStatus();
-  } catch(e) {
-    setApoStatus(e.message || "名寄せ登録に失敗しました", true);
-  }
 }
 loadPlannerList();
 </script>
