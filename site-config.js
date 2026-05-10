@@ -1,1 +1,1 @@
-window.BOSO_GAS_URL = "https://script.google.com/macros/s/AKfycbznKVB6rQvNP49bE__XCk_QWTZUaI4B-N0tWA7q6z2xdq876aGWrWzAt64YiuHtOVAU/exec";
+window.BOSO_GAS_URL = "https://script.google.com/macros/s/AKfycbzTxo3r8H6TnGP2_XUoAwQ1ks473sQPyzoBRTz83slrOGk6x43-uCmiR93Ynebxl41h/exec";

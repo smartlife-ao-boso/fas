@@ -361,7 +361,35 @@ var GAS_URL = window.BOSO_GAS_URL || "";
 
 // GASからデータ読み込み（リダイレクト対応）
 function loadGAS(url) {
-    return fetch(url, { redirect: "follow" }).then(function(r) { return r.json(); });
+    return new Promise(function(resolve, reject) {
+        var cbName = "plannerJsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        var script = document.createElement("script");
+        var done = false;
+        var timer = setTimeout(function() {
+            if (done) return;
+            done = true;
+            delete window[cbName];
+            script.remove();
+            reject(new Error("GASから応答がありません"));
+        }, 15000);
+        window[cbName] = function(data) {
+            done = true;
+            clearTimeout(timer);
+            delete window[cbName];
+            script.remove();
+            resolve(data);
+        };
+        script.onerror = function() {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            delete window[cbName];
+            script.remove();
+            reject(new Error("GAS通信エラー"));
+        };
+        script.src = url + (url.indexOf("?") === -1 ? "?" : "&") + "callback=" + cbName + "&_=" + Date.now();
+        document.body.appendChild(script);
+    });
 }
 
 var profile = null;
@@ -721,7 +749,7 @@ async function saveData() {
         }
     } catch(e) {
         document.getElementById("saveMsg").className = "save-msg err";
-        document.getElementById("saveMsg").textContent = "通信エラー: ネット接続を確認してください";
+        document.getElementById("saveMsg").textContent = "通信エラー: " + (e && e.message ? e.message : "ネット接続を確認してください");
         saveBtn.disabled = false;
         saveBtn.textContent = "保存する";
     }
