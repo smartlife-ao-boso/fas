@@ -93,7 +93,7 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
   </div>
   <div class="top-row">
     <div class="search-area"><input type="text" id="q" placeholder="プランナー名で検索..." oninput="filter()"><div class="quick-links"><a href="log.html" class="quick-link">変更ログを確認</a><a href="apo-boso/" class="quick-button">房総APOを開く</a></div></div>
-    <div class="notice-area"><div class="notice-title">連絡事項</div><div class="notice-list" id="noticeList"><div class="notice-empty">房総専用GAS URLが未設定です</div></div></div>
+    <div class="notice-area"><div class="notice-title">連絡事項</div><div class="notice-list" id="noticeList"><div class="notice-empty">連絡事項を読み込み中...</div></div></div>
   </div>
   <div id="regions"></div>
   <div class="admin-panel">
@@ -117,7 +117,7 @@ body { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; 
     <div class="admin-message">Ctrl/⌘/Altを押しながらプランナーをクリックすると、氏名と現在拠点を入力欄へ入れられます。</div>
   </div>
 </div>
-<script src="site-config.js"></script>
+<script src="site-config.js?v=20260514"></script>
 <script>
 var GAS_URL = window.BOSO_GAS_URL || "";
 var planners = [];
